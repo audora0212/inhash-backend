@@ -18,7 +18,11 @@ public class PostService {
     }
 
     public Post getPostById(Long id) {
-        return postRepository.findById(id).orElse(null);
+        return postRepository.findById(id).map(post -> {
+            // 조회 시 viewCount 증가
+            post.setViewCount(post.getViewCount() + 1);
+            return postRepository.save(post);
+        }).orElse(null);
     }
 
     public Post createPost(Post post) {
