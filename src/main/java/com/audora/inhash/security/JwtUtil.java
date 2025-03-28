@@ -9,7 +9,7 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private final String jwtSecret = "secret_key";  // 실제 운영 시 더 복잡한 키를 사용하세요.
+    private final String jwtSecret = "secret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_keysecret_key";
     private final long jwtExpirationMs = 86400000; // 1일
 
     // SecretKey 객체 생성
