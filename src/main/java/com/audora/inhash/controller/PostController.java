@@ -20,10 +20,18 @@ public class PostController {
         return new ResponseEntity<>(postService.getAllPosts(), HttpStatus.OK);
     }
 
+    // 단순 조회: viewCount 업데이트 X
     @GetMapping("/{id}")
     public ResponseEntity<Post> getPostById(@PathVariable Long id) {
         Post post = postService.getPostById(id);
         return post != null ? new ResponseEntity<>(post, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    // 조회수 업데이트 전용 엔드포인트 (GET은 안전 메서드이므로 POST로 분리)
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Post> incrementView(@PathVariable Long id) {
+        Post updatedPost = postService.incrementViewCount(id);
+        return updatedPost != null ? new ResponseEntity<>(updatedPost, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @PostMapping
