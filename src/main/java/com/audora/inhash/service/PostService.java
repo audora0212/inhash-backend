@@ -34,13 +34,14 @@ public class PostService {
     }
 
     public Post createPost(Post post) {
-        // 현재 인증된 사용자 이름을 글 작성자로 설정
+        // 로그인한 사용자명 사용
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         post.setAuthor(currentUsername);
         post.setCreatedDate(LocalDateTime.now());
         post.setUpdatedDate(LocalDateTime.now());
         return postRepository.save(post);
     }
+
 
     public Post updatePost(Long id, Post updatedPost) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();

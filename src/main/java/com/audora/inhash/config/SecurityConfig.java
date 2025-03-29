@@ -6,6 +6,7 @@ import com.audora.inhash.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,24 +27,25 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtUtil, userDetailsService);
         http
-                .cors(Customizer.withDefaults()) // 기존 CorsConfig 설정 사용
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        // 공개 API 경로 추가
+                        // GET 요청은 공개
+                        .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
+                        // 그 외 공개해야 하는 API들
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/sw-notices/**",
                                 "/api/internship-infos/**",
                                 "/api/it-contest-sites/**",
-                                "/api/posts/**",
                                 "/api/job-postings/**"
                         ).permitAll()
+                        // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

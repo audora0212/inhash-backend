@@ -5,6 +5,7 @@ import com.audora.inhash.model.Post;
 import com.audora.inhash.repository.CommentRepository;
 import com.audora.inhash.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,10 +26,14 @@ public class CommentService {
         if (post == null) {
             return null;
         }
+        // 인증된 사용자명을 댓글 작성자로 사용
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        comment.setAuthor(currentUsername);
         comment.setPost(post);
         comment.setCreatedDate(LocalDateTime.now());
         return commentRepository.save(comment);
     }
+
 
     public void deleteComment(Long id) {
         commentRepository.deleteById(id);
