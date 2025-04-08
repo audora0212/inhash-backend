@@ -21,13 +21,14 @@ public class Post {
 
     private String title;
     private String content;
-    private String author;
+    private Long authorId;  // 작성자 id로 변경
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 
     private Integer likeCount = 0;
-    private Integer viewCount = 0; // 조회수 필드 추가
+    private Integer viewCount = 0;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments;
 }
+

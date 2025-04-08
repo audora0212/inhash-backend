@@ -1,6 +1,7 @@
 package com.audora.inhash.service;
 
 import com.audora.inhash.model.Post;
+import com.audora.inhash.model.User;
 import com.audora.inhash.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,17 +15,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostService {
     private final PostRepository postRepository;
+    private final UserService userService;  // UserService 주입
 
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
 
-    // 단순 조회: viewCount 증가는 하지 않음.
     public Post getPostById(Long id) {
         return postRepository.findById(id).orElse(null);
     }
 
-    // 별도의 엔드포인트에서 호출하여 조회수를 업데이트
     public Post incrementViewCount(Long id) {
         return postRepository.findById(id).map(post -> {
             Integer currentCount = post.getViewCount() != null ? post.getViewCount() : 0;
@@ -34,20 +34,23 @@ public class PostService {
     }
 
     public Post createPost(Post post) {
-        // 로그인한 사용자명 사용
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        post.setAuthor(currentUsername);
+        // 현재 로그인한 사용자의 정보를 조회하여 id를 추출
+        User currentUser = userService.findByUsername(currentUsername);
+        post.setAuthorId(currentUser.getId());
         post.setCreatedDate(LocalDateTime.now());
         post.setUpdatedDate(LocalDateTime.now());
         return postRepository.save(post);
     }
 
-
     public Post updatePost(Long id, Post updatedPost) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userService.findByUsername(currentUsername);
+
         return postRepository.findById(id).map(post -> {
-            if (!post.getAuthor().equals(currentUsername)) {
-                throw new AccessDeniedException("You are not authorized to update this post");
+            // 현재 글 작성자와 로그인한 사용자 id 비교
+            if (!post.getAuthorId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("본인이 작성한 글만 수정할 수 있습니다.");
             }
             post.setTitle(updatedPost.getTitle());
             post.setContent(updatedPost.getContent());
@@ -58,10 +61,12 @@ public class PostService {
 
     public void deletePost(Long id) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userService.findByUsername(currentUsername);
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
-        if (!post.getAuthor().equals(currentUsername)) {
-            throw new AccessDeniedException("You are not authorized to delete this post");
+        // 현재 글 작성자와 로그인한 사용자 id 비교
+        if (!post.getAuthorId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("본인이 작성한 글만 삭제할 수 있습니다.");
         }
         postRepository.deleteById(id);
     }

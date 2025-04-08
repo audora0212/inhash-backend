@@ -2,6 +2,7 @@ package com.audora.inhash.service;
 
 import com.audora.inhash.model.Comment;
 import com.audora.inhash.model.Post;
+import com.audora.inhash.model.User;
 import com.audora.inhash.repository.CommentRepository;
 import com.audora.inhash.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.List;
 public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
+    private final UserService userService;  // UserService 주입
 
     public List<Comment> getCommentsByPostId(Long postId) {
         return commentRepository.findByPostId(postId);
@@ -26,14 +28,13 @@ public class CommentService {
         if (post == null) {
             return null;
         }
-        // 인증된 사용자명을 댓글 작성자로 사용
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        comment.setAuthor(currentUsername);
+        User currentUser = userService.findByUsername(currentUsername);
+        comment.setAuthorId(currentUser.getId());  // 사용자 id 저장
         comment.setPost(post);
         comment.setCreatedDate(LocalDateTime.now());
         return commentRepository.save(comment);
     }
-
 
     public void deleteComment(Long id) {
         commentRepository.deleteById(id);

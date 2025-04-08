@@ -44,26 +44,63 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
             );
             logger.info("인증 성공: {}", authentication.getName());
+            // DB에서 사용자 정보 조회
+            User user = userService.findByUsername(loginRequest.getUsername());
+            // 비밀번호 제거
+            user.setPassword(null);
             String token = jwtUtil.generateToken(loginRequest.getUsername());
-            return ResponseEntity.ok(new AuthResponse(token));
+            // DTO를 사용하여 사용자 정보를 클라이언트에 전송
+            return ResponseEntity.ok(new AuthResponse(token, new UserResponse(user)));
         } catch (Exception e) {
             logger.error("로그인 실패: {}", e.getMessage(), e);
             return new ResponseEntity<>("잘못된 아이디 또는 비밀번호입니다.", HttpStatus.UNAUTHORIZED);
         }
     }
 
-    // 단순 토큰 응답 클래스
+    // 응답 객체: 토큰과 사용자 정보를 함께 포함
     static class AuthResponse {
         private String token;
+        private UserResponse user;
 
-        public AuthResponse(String token) {
+        public AuthResponse(String token, UserResponse user) {
             this.token = token;
+            this.user = user;
         }
+
         public String getToken() {
             return token;
         }
         public void setToken(String token) {
             this.token = token;
+        }
+        public UserResponse getUser() {
+            return user;
+        }
+        public void setUser(UserResponse user) {
+            this.user = user;
+        }
+    }
+
+    // 사용자 정보 DTO – 클라이언트에 필요한 필드만 포함
+    static class UserResponse {
+        private Long id;
+        private String username;
+
+        public UserResponse(User user) {
+            this.id = user.getId();
+            this.username = user.getUsername();
+        }
+        public Long getId() {
+            return id;
+        }
+        public void setId(Long id) {
+            this.id = id;
+        }
+        public String getUsername() {
+            return username;
+        }
+        public void setUsername(String username) {
+            this.username = username;
         }
     }
 }

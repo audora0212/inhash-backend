@@ -18,7 +18,7 @@ public class Comment {
     private Long id;
 
     private String content;
-    private String author;
+    private Long authorId;  // 작성자 id로 변경
     private LocalDateTime createdDate;
 
     @ManyToOne
