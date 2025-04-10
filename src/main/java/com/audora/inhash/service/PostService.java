@@ -1,5 +1,8 @@
 package com.audora.inhash.service;
 
+import com.audora.inhash.dto.CommentResponseDto;
+import com.audora.inhash.dto.PostResponseDto;
+import com.audora.inhash.model.Comment;
 import com.audora.inhash.model.Post;
 import com.audora.inhash.model.User;
 import com.audora.inhash.repository.PostRepository;
@@ -10,12 +13,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PostService {
+
     private final PostRepository postRepository;
-    private final UserService userService;  // UserService 주입
+    private final UserService userService;
 
     public List<Post> getAllPosts() {
         return postRepository.findAll();
@@ -35,7 +40,6 @@ public class PostService {
 
     public Post createPost(Post post) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        // 현재 로그인한 사용자의 정보를 조회하여 id를 추출
         User currentUser = userService.findByUsername(currentUsername);
         post.setAuthorId(currentUser.getId());
         post.setCreatedDate(LocalDateTime.now());
@@ -46,9 +50,7 @@ public class PostService {
     public Post updatePost(Long id, Post updatedPost) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         User currentUser = userService.findByUsername(currentUsername);
-
         return postRepository.findById(id).map(post -> {
-            // 현재 글 작성자와 로그인한 사용자 id 비교
             if (!post.getAuthorId().equals(currentUser.getId())) {
                 throw new AccessDeniedException("본인이 작성한 글만 수정할 수 있습니다.");
             }
@@ -64,7 +66,6 @@ public class PostService {
         User currentUser = userService.findByUsername(currentUsername);
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
-        // 현재 글 작성자와 로그인한 사용자 id 비교
         if (!post.getAuthorId().equals(currentUser.getId())) {
             throw new AccessDeniedException("본인이 작성한 글만 삭제할 수 있습니다.");
         }
@@ -77,5 +78,35 @@ public class PostService {
             post.setLikeCount(currentLikes + 1);
             return postRepository.save(post);
         }).orElse(null);
+    }
+
+    public PostResponseDto convertToPostResponseDto(Post post) {
+        User user = userService.findById(post.getAuthorId());
+        String username = (user != null) ? user.getUsername() : "Unknown";
+
+        List<CommentResponseDto> commentDtos = post.getComments().stream().map(comment -> {
+            // 댓글 작성자 정보 조회 (username)
+            User commentUser = userService.findById(comment.getAuthorId());
+            String commentUsername = (commentUser != null) ? commentUser.getUsername() : "Unknown";
+
+            return new CommentResponseDto(
+                    comment.getId(),
+                    comment.getContent(),
+                    commentUsername,
+                    comment.getCreatedDate()
+            );
+        }).collect(Collectors.toList());
+
+        return new PostResponseDto(
+                post.getId(),
+                post.getTitle(),
+                post.getContent(),
+                username,
+                post.getCreatedDate(),
+                post.getUpdatedDate(),
+                post.getLikeCount(),
+                post.getViewCount(),
+                commentDtos  // 변환된 댓글 DTO 리스트 전달
+        );
     }
 }

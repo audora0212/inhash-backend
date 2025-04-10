@@ -13,16 +13,19 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public User registerUser(User user) {
-        // username 중복 여부 체크
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             throw new RuntimeException("이미 등록된 아이디입니다.");
         }
-        // 비밀번호 암호화 처리
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username).orElse(null);
+    }
+
+    // 추가: id로 User를 조회하는 메서드
+    public User findById(Long id) {
+        return userRepository.findById(id).orElse(null);
     }
 }

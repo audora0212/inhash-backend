@@ -21,7 +21,7 @@ public class Post {
 
     private String title;
     private String content;
-    private Long authorId;  // 작성자 id로 변경
+    private Long authorId;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 
