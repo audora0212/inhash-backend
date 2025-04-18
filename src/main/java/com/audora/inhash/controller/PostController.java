@@ -27,10 +27,11 @@ public class PostController {
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
-    // 단일 게시글 조회 (PostResponseDto 반환)
+    // 단일 게시글 조회 및 조회수 증가 적용
     @GetMapping("/{id}")
     public ResponseEntity<PostResponseDto> getPostById(@PathVariable Long id) {
-        Post post = postService.getPostById(id);
+        // 조회수 증가와 함께 Post 객체 반환
+        Post post = postService.incrementViewCount(id);
         if (post != null) {
             return new ResponseEntity<>(postService.convertToPostResponseDto(post), HttpStatus.OK);
         } else {
