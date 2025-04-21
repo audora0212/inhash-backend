@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // GET 요청은 공개
                         .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
-                        // 그 외 공개해야 하는 API들
+                        // 공개 API
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/sw-notices/**",
@@ -40,6 +40,10 @@ public class SecurityConfig {
                                 "/api/it-contest-sites/**",
                                 "/api/job-postings/**"
                         ).permitAll()
+                        // 사용자 프로필 관련: 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
