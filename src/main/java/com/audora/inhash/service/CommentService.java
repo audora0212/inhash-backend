@@ -43,11 +43,17 @@ public class CommentService {
         commentRepository.deleteById(id);
     }
 
-    // Comment 엔티티를 CommentResponseDto로 변환하여 반환
+    // 수정: postId까지 포함하도록 5-args 생성자 호출
     public CommentResponseDto convertToCommentResponseDto(Comment comment) {
         User user = userService.findById(comment.getAuthorId());
         String username = (user != null) ? user.getUsername() : "Unknown";
-        return new CommentResponseDto(comment.getId(), comment.getContent(), username, comment.getCreatedDate());
+        return new CommentResponseDto(
+                comment.getId(),
+                comment.getContent(),
+                username,
+                comment.getCreatedDate(),
+                comment.getPost().getId()      // postId 추가
+        );
     }
 
     public List<CommentResponseDto> getCommentsByAuthorId(Long authorId) {

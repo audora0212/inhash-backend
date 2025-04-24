@@ -2,7 +2,6 @@ package com.audora.inhash.service;
 
 import com.audora.inhash.dto.CommentResponseDto;
 import com.audora.inhash.dto.PostResponseDto;
-import com.audora.inhash.model.Comment;
 import com.audora.inhash.model.Post;
 import com.audora.inhash.model.User;
 import com.audora.inhash.repository.PostRepository;
@@ -84,16 +83,16 @@ public class PostService {
         User user = userService.findById(post.getAuthorId());
         String username = (user != null) ? user.getUsername() : "Unknown";
 
+        // 수정: 댓글 DTO 생성 시에도 postId 포함
         List<CommentResponseDto> commentDtos = post.getComments().stream().map(comment -> {
-            // 댓글 작성자 정보 조회 (username)
             User commentUser = userService.findById(comment.getAuthorId());
             String commentUsername = (commentUser != null) ? commentUser.getUsername() : "Unknown";
-
             return new CommentResponseDto(
                     comment.getId(),
                     comment.getContent(),
                     commentUsername,
-                    comment.getCreatedDate()
+                    comment.getCreatedDate(),
+                    comment.getPost().getId()
             );
         }).collect(Collectors.toList());
 
@@ -106,7 +105,7 @@ public class PostService {
                 post.getUpdatedDate(),
                 post.getLikeCount(),
                 post.getViewCount(),
-                commentDtos  // 변환된 댓글 DTO 리스트 전달
+                commentDtos
         );
     }
 }
