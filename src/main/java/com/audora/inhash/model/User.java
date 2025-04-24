@@ -5,20 +5,31 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+// src/main/java/com/audora/inhash/model/User.java
+
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 기존 email 필드는 그대로 둘 수 있습니다.
     private String email;
 
     @Column(unique = true)
     private String username;
 
     private String password;
+
+    // --- 가입일시 필드 추가 ---
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime joinDate;
+
+    @PrePersist
+    public void prePersist() {
+        this.joinDate = LocalDateTime.now();
+    }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,5 +48,11 @@ public class CommentService {
         User user = userService.findById(comment.getAuthorId());
         String username = (user != null) ? user.getUsername() : "Unknown";
         return new CommentResponseDto(comment.getId(), comment.getContent(), username, comment.getCreatedDate());
+    }
+
+    public List<CommentResponseDto> getCommentsByAuthorId(Long authorId) {
+        return commentRepository.findByAuthorId(authorId).stream()
+                .map(this::convertToCommentResponseDto)
+                .collect(Collectors.toList());
     }
 }

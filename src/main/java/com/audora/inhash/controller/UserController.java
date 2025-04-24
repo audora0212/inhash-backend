@@ -1,10 +1,7 @@
+// src/main/java/com/audora/inhash/controller/UserController.java
 package com.audora.inhash.controller;
 
-import com.audora.inhash.dto.ChangePasswordRequest;
-import com.audora.inhash.dto.PostResponseDto;
-import com.audora.inhash.dto.CommentResponseDto;
-import com.audora.inhash.dto.UpdateProfileRequest;
-import com.audora.inhash.dto.UserResponse;
+import com.audora.inhash.dto.*;
 import com.audora.inhash.model.User;
 import com.audora.inhash.service.CommentService;
 import com.audora.inhash.service.PostService;
@@ -16,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -34,7 +30,13 @@ public class UserController {
         if (user == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.ok(new UserResponse(user.getId(), user.getUsername()));
+        UserResponse dto = new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getJoinDate()
+        );
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/{id}/posts")
@@ -42,16 +44,13 @@ public class UserController {
         List<PostResponseDto> dtos = postService.getAllPosts().stream()
                 .filter(p -> p.getAuthorId().equals(id))
                 .map(postService::convertToPostResponseDto)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}/comments")
     public ResponseEntity<List<CommentResponseDto>> getUserComments(@PathVariable Long id) {
-        List<CommentResponseDto> dtos = commentService.getCommentsByPostId(id).stream()
-                .filter(c -> c.getAuthorId().equals(id))
-                .map(commentService::convertToCommentResponseDto)
-                .collect(Collectors.toList());
+        List<CommentResponseDto> dtos = commentService.getCommentsByAuthorId(id);
         return ResponseEntity.ok(dtos);
     }
 
@@ -61,7 +60,13 @@ public class UserController {
             @RequestBody UpdateProfileRequest req) {
         try {
             User updated = userService.updateProfile(id, req.getEmail(), req.getUsername());
-            return ResponseEntity.ok(new UserResponse(updated.getId(), updated.getUsername()));
+            UserResponse dto = new UserResponse(
+                    updated.getId(),
+                    updated.getUsername(),
+                    updated.getEmail(),
+                    updated.getJoinDate()
+            );
+            return ResponseEntity.ok(dto);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }

@@ -1,3 +1,4 @@
+// src/main/java/com/audora/inhash/controller/AuthController.java
 package com.audora.inhash.controller;
 
 import com.audora.inhash.dto.AuthResponse;
@@ -43,14 +44,26 @@ public class AuthController {
         try {
             logger.info("로그인 시도: username={}", loginRequest.getUsername());
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
             );
             logger.info("인증 성공: {}", authentication.getName());
+
+            // 실제 User 정보 조회
             User user = userService.findByUsername(loginRequest.getUsername());
-            // 비밀번호 정보 제거
             user.setPassword(null);
+
             String token = jwtUtil.generateToken(loginRequest.getUsername());
-            return ResponseEntity.ok(new AuthResponse(token, new UserResponse(user.getId(), user.getUsername())));
+            UserResponse userDto = new UserResponse(
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getJoinDate()
+            );
+
+            return ResponseEntity.ok(new AuthResponse(token, userDto));
         } catch (Exception e) {
             logger.error("로그인 실패: {}", e.getMessage(), e);
             return new ResponseEntity<>("잘못된 아이디 또는 비밀번호입니다.", HttpStatus.UNAUTHORIZED);
