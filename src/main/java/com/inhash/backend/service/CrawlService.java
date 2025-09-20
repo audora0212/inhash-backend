@@ -31,6 +31,7 @@ public class CrawlService {
     private final CourseRepository courseRepository;
     private final SyncLogRepository syncLogRepository;
     private final StudentRepository studentRepository;
+    private final LmsAccountService lmsAccountService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${inhash.crawl.python.workingDir:}")
@@ -44,12 +45,13 @@ public class CrawlService {
     @Value("${inhash.crawl.internal.password:dudcks!@34}")
     private String internalPassword;
 
-    public CrawlService(AssignmentRepository assignmentRepository, LectureRepository lectureRepository, CourseRepository courseRepository, SyncLogRepository syncLogRepository, StudentRepository studentRepository) {
+    public CrawlService(AssignmentRepository assignmentRepository, LectureRepository lectureRepository, CourseRepository courseRepository, SyncLogRepository syncLogRepository, StudentRepository studentRepository, LmsAccountService lmsAccountService) {
         this.assignmentRepository = assignmentRepository;
         this.lectureRepository = lectureRepository;
         this.courseRepository = courseRepository;
         this.syncLogRepository = syncLogRepository;
         this.studentRepository = studentRepository;
+        this.lmsAccountService = lmsAccountService;
     }
 
     public int runCrawlAndImport() {
@@ -61,11 +63,18 @@ public class CrawlService {
         SyncLog log = new SyncLog();
         log.setSource("python-final" + (studentId != null ? (":" + studentId) : ""));
         int imported = 0;
+        String outputPath = null;
         try {
             if (workingDir == null || workingDir.isBlank()) throw new IllegalStateException("workingDir not configured");
             if (pythonExe == null || pythonExe.isBlank()) throw new IllegalStateException("python executable not configured");
             if (script == null || script.isBlank()) throw new IllegalStateException("python script not configured");
 
+            // 작업별 output 경로를 분리하여 동시 실행 충돌 방지
+            outputPath = Path.of(workingDir, "output", "final-" + UUID.randomUUID() + ".json").toString();
+            // ensure parent directory exists
+            try {
+                Files.createDirectories(Path.of(workingDir, "output"));
+            } catch (Exception ignore) {}
             ProcessBuilder pb = new ProcessBuilder(pythonExe, script);
             pb.directory(new File(workingDir));
             pb.redirectErrorStream(true);
@@ -73,6 +82,7 @@ public class CrawlService {
             pb.environment().put("PYTHONIOENCODING", "utf-8");
             if (username != null) pb.environment().put("INHASH_USERNAME", username);
             if (password != null) pb.environment().put("INHASH_PASSWORD", password);
+            pb.environment().put("INHASH_OUTPUT_PATH", outputPath);
             Process proc = pb.start();
 
             StringBuilder out = new StringBuilder();
@@ -85,7 +95,7 @@ public class CrawlService {
             int code = proc.waitFor();
             if (code != 0) throw new RuntimeException("final.py exit code " + code + "\n" + out);
 
-            Path jsonPath = Path.of(workingDir, "output", "final.json");
+            Path jsonPath = Path.of(outputPath);
             if (!Files.exists(jsonPath)) throw new RuntimeException("final.json not found: " + jsonPath);
 
             JsonNode root = objectMapper.readTree(Files.readString(jsonPath, StandardCharsets.UTF_8));
@@ -93,8 +103,25 @@ public class CrawlService {
             if (items == null || !items.isArray()) throw new RuntimeException("invalid final.json: items[] missing");
             System.out.println("[CrawlService] final.json items size=" + items.size());
 
+            // 먼저 전체 과목 목록을 courses[]로부터 보장 생성 (과제/수업이 없어도 과목은 추가)
+            JsonNode courseList = root.has("courses") ? root.get("courses") : null;
+            if (courseList != null && courseList.isArray()) {
+                for (JsonNode c : courseList) {
+                    String courseName = optText(c, "name");
+                    String courseId = digest(courseName);
+                    courseRepository.findById(courseId).orElseGet(() -> {
+                        Course nc = new Course();
+                        nc.setId(courseId);
+                        nc.setName(courseName);
+                        nc.setMainLink(optText(c, "main_link"));
+                        return courseRepository.save(nc);
+                    });
+                }
+            }
+
             imported = 0;
             int seen = 0;
+            final Instant nowKstInstant = Instant.now();
             for (JsonNode it : items) {
                 String type = optText(it, "type");
                 if (type != null) {
@@ -122,6 +149,10 @@ public class CrawlService {
                 });
 
                 Instant dueAt = parseDue(due);
+                // KST 기준 과거 마감 항목은 제외
+                if (dueAt != null && dueAt.isBefore(nowKstInstant)) {
+                    continue;
+                }
                 String id = digest(title + "|" + (url == null ? "" : url) + "|" + courseId + "|" + String.valueOf(studentId));
 
                 if ("assignment".equalsIgnoreCase(type)) {
@@ -150,11 +181,23 @@ public class CrawlService {
             log.setStatus("success");
             log.setMessage("items=" + items.size() + ", imported=" + imported);
             System.out.println("[CrawlService] imported=" + imported);
+            if (studentId != null) {
+                try { lmsAccountService.markSynced(studentId, true); } catch (Exception ignore) {}
+            }
         } catch (Exception e) {
             log.setStatus("error");
             log.setMessage(e.getMessage());
+            if (studentId != null) {
+                try { lmsAccountService.markSynced(studentId, false); } catch (Exception ignore) {}
+            }
         } finally {
             syncLogRepository.save(log);
+            // cleanup temporary output file
+            try {
+                if (outputPath != null) {
+                    Files.deleteIfExists(Path.of(outputPath));
+                }
+            } catch (Exception ignore) {}
         }
         return imported;
     }
@@ -182,7 +225,7 @@ public class CrawlService {
             String norm = due.trim();
             if (norm.length() == 16) norm = norm + ":00";
             LocalDateTime ldt = LocalDateTime.parse(norm.replace(' ', 'T'));
-            return ldt.atZone(ZoneId.systemDefault()).toInstant();
+            return ldt.atZone(ZoneId.of("Asia/Seoul")).toInstant();
         } catch (Exception e) {
             return null;
         }

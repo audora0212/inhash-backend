@@ -51,6 +51,14 @@ public class LmsAccountService {
     public LMSAccount getByStudentId(Long studentId) {
         return lmsAccountRepository.findByStudentId(studentId).orElseThrow();
     }
+
+    @Transactional
+    public void markSynced(Long studentId, boolean success) {
+        LMSAccount acc = lmsAccountRepository.findByStudentId(studentId).orElseThrow();
+        acc.setLastSyncedAt(java.time.Instant.now());
+        acc.setStatus(success ? "CONNECTED" : "ERROR");
+        lmsAccountRepository.save(acc);
+    }
 }
 
 

@@ -9,10 +9,12 @@ public class RegistrationService {
 
     private final AuthService authService;
     private final LmsAccountService lmsAccountService;
+    private final CrawlService crawlService;
 
-    public RegistrationService(AuthService authService, LmsAccountService lmsAccountService) {
+    public RegistrationService(AuthService authService, LmsAccountService lmsAccountService, CrawlService crawlService) {
         this.authService = authService;
         this.lmsAccountService = lmsAccountService;
+        this.crawlService = crawlService;
     }
 
     @Transactional
@@ -22,6 +24,8 @@ public class RegistrationService {
         lmsAccountService.registerLmsAccount(s.getId(), lmsUsername, lmsPassword);
         return s;
     }
+
+    // 간단: 컨트롤러 단에서 커밋 후 크롤을 호출하도록 위임 (이벤트 대신 명시 호출)
 }
 
 

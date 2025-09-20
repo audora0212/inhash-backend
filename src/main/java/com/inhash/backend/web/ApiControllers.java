@@ -6,6 +6,7 @@ import com.inhash.backend.repository.AssignmentRepository;
 import com.inhash.backend.repository.CourseRepository;
 import com.inhash.backend.repository.LectureRepository;
 import com.inhash.backend.repository.SyncLogRepository;
+import com.inhash.backend.repository.SyncJobRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -23,12 +24,14 @@ public class ApiControllers {
     private final LectureRepository lectureRepository;
     private final CourseRepository courseRepository;
     private final SyncLogRepository syncLogRepository;
+    private final SyncJobRepository syncJobRepository;
 
-    public ApiControllers(AssignmentRepository assignmentRepository, LectureRepository lectureRepository, CourseRepository courseRepository, SyncLogRepository syncLogRepository) {
+    public ApiControllers(AssignmentRepository assignmentRepository, LectureRepository lectureRepository, CourseRepository courseRepository, SyncLogRepository syncLogRepository, SyncJobRepository syncJobRepository) {
         this.assignmentRepository = assignmentRepository;
         this.lectureRepository = lectureRepository;
         this.courseRepository = courseRepository;
         this.syncLogRepository = syncLogRepository;
+        this.syncJobRepository = syncJobRepository;
     }
 
     @GetMapping("/health")
@@ -60,6 +63,13 @@ public class ApiControllers {
                 "count", logs.size(),
                 "logs", logs
         );
+    }
+
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<?> job(@PathVariable String jobId) {
+        return syncJobRepository.findByJobId(jobId)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
 

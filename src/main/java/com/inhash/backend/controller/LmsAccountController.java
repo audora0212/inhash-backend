@@ -1,6 +1,7 @@
 package com.inhash.backend.controller;
 
 import com.inhash.backend.service.CrawlService;
+import com.inhash.backend.service.SyncJobService;
 import com.inhash.backend.service.LmsAccountService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +14,12 @@ public class LmsAccountController {
 
     private final LmsAccountService lmsAccountService;
     private final CrawlService crawlService;
+    private final SyncJobService syncJobService;
 
-    public LmsAccountController(LmsAccountService lmsAccountService, CrawlService crawlService) {
+    public LmsAccountController(LmsAccountService lmsAccountService, CrawlService crawlService, SyncJobService syncJobService) {
         this.lmsAccountService = lmsAccountService;
         this.crawlService = crawlService;
+        this.syncJobService = syncJobService;
     }
 
     @PostMapping
@@ -25,12 +28,8 @@ public class LmsAccountController {
         String username = body.get("username");
         String password = body.get("password");
         var acc = lmsAccountService.registerLmsAccount(studentId, username, password);
-        try {
-            int imported = crawlService.runCrawlAndImportForStudent(studentId, username, password);
-            return ResponseEntity.ok(Map.of("id", acc.getId(), "synced", true, "imported", imported));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("id", acc.getId(), "synced", false, "error", e.getMessage()));
-        }
+        String jobId = syncJobService.submit(studentId, username, password);
+        return ResponseEntity.accepted().body(Map.of("id", acc.getId(), "jobId", jobId, "status", "queued"));
     }
 
     @PutMapping

@@ -2,6 +2,8 @@ package com.inhash.backend.controller;
 
 import com.inhash.backend.domain.Student;
 import com.inhash.backend.service.AuthService;
+import com.inhash.backend.service.CrawlService;
+import com.inhash.backend.service.SyncJobService;
 import com.inhash.backend.service.RegistrationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +17,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final RegistrationService registrationService;
+    private final CrawlService crawlService;
+    private final SyncJobService syncJobService;
 
-    public AuthController(AuthService authService, RegistrationService registrationService) {
+    public AuthController(AuthService authService, RegistrationService registrationService, CrawlService crawlService, SyncJobService syncJobService) {
         this.authService = authService;
         this.registrationService = registrationService;
+        this.crawlService = crawlService;
+        this.syncJobService = syncJobService;
     }
 
     @PostMapping("/register")
@@ -31,7 +37,14 @@ public class AuthController {
                 body.get("lmsUsername"),
                 body.get("lmsPassword")
         );
-        return ResponseEntity.ok(Map.of("id", s.getId()));
+        String jobId = syncJobService.submit(
+                s.getId(), body.get("lmsUsername"), body.get("lmsPassword")
+        );
+        return ResponseEntity.accepted().body(Map.of(
+                "id", s.getId(),
+                "jobId", jobId,
+                "status", "queued"
+        ));
     }
 
     @PostMapping("/login")

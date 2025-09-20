@@ -10,7 +10,7 @@ public class SyncLog {
     private Long id;
     private String source;
     private String status;
-    @Column(length = 2000)
+    @Lob
     private String message;
     private Instant syncedAt = Instant.now();
 
