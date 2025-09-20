@@ -1,13 +1,13 @@
-package Audora.iu.inhash;
+package com.inhash.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class InhashApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-
+class ContextLoadsTest {
+    @Test
+    void contextLoads() {
+    }
 }
+
+
