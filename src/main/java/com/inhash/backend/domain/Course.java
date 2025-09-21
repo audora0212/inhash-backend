@@ -2,6 +2,11 @@ package com.inhash.backend.domain;
 
 import jakarta.persistence.*;
 
+/**
+ * LMS에서 제공되는 "과목"(강좌) 정보를 저장합니다.
+ * - id는 외부 LMS의 코스 ID를 해시/가공하여 사용합니다.
+ * - mainLink는 과목 메인 페이지 URL입니다.
+ */
 @Entity
 @Table(name = "courses")
 public class Course {

@@ -3,6 +3,11 @@ package com.inhash.backend.domain;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * 푸시 알림 전송을 위한 FCM 토큰을 저장합니다.
+ * - 각 학생은 여러 기기에서 발급된 토큰을 가질 수 있습니다.
+ * - token은 전역 유니크로 중복 저장을 방지합니다.
+ */
 @Entity
 @Table(name = "fcm_tokens")
 public class FcmToken {

@@ -3,6 +3,14 @@ package com.inhash.backend.domain;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * 비동기 동기화 작업(Job)의 상태를 추적합니다.
+ * - jobId: 외부에 제공되는 조회용 식별자(UUID)
+ * - status: queued / running / completed / failed
+ * - imported: 이번 실행에서 반영된 항목 수
+ * - error: 실패 시 상세 메시지(TEXT)
+ * - createdAt/startedAt/finishedAt: 실행 타임라인
+ */
 @Entity
 @Table(name = "sync_jobs")
 public class SyncJob {

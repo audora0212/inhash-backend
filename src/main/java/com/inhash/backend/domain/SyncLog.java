@@ -3,6 +3,13 @@ package com.inhash.backend.domain;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * 크롤링/동기화 실행에 대한 결과 로그를 남깁니다.
+ * - source: 실행 소스/식별자
+ * - status: success / error
+ * - message: 상세 로그(TEXT)
+ * - syncedAt: 로그 기록 시각
+ */
 @Entity
 @Table(name = "sync_logs")
 public class SyncLog {

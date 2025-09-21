@@ -4,10 +4,16 @@ import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.Instant;
 
+/**
+ * 학생이 수강해야 하는 "강의(차시)" 항목입니다.
+ * - iClass/VOD 등 플랫폼별 형식을 통합해 저장합니다.
+ * - dueAt은 수강 가능 기간의 종료 시각을 의미합니다.
+ */
 @Entity
 @Table(name = "lectures")
 public class Lecture {
     @Id
+    /** 강의(차시) 식별자: 외부 인스턴스 ID 또는 (제목|URL|코스|학생) 해시 */
     private String id; // lmsInstanceId or URL hash
     @ManyToOne(optional = false)
     private Course course;

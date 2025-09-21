@@ -2,6 +2,11 @@ package com.inhash.backend.domain;
 
 import jakarta.persistence.*;
 
+/**
+ * 서비스의 기본 사용자(학생) 정보를 저장합니다.
+ * - email은 로그인 식별자로 고유(unique)합니다.
+ * - passwordHash는 현재 MD5로 저장되며, 추후 BCrypt로 강화 예정입니다.
+ */
 @Entity
 @Table(name = "students")
 public class Student {

@@ -3,6 +3,12 @@ package com.inhash.backend.domain;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * 학생의 LMS(학교 학습관리시스템) 로그인 계정을 보관합니다.
+ * - Student와 1:1로 연결되며, username/password를 저장합니다.
+ * - status와 lastSyncedAt으로 최신 동기화 상태를 추적합니다.
+ *   (보안 개선: password는 향후 암호화/비밀관리로 전환 예정)
+ */
 @Entity
 @Table(name = "lms_accounts")
 public class LMSAccount {
