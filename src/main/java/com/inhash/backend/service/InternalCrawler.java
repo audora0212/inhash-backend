@@ -180,7 +180,6 @@ public class InternalCrawler {
     private static String normalizeDue(String s) {
         if (s == null) return null;
         s = s.replace('\u00A0', ' ').trim();
-        // 허용 포맷: YYYY-MM-DD HH:MM[:SS]
         if (s.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) return s;
         if (s.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) return s;
         return s;

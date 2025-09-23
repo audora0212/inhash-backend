@@ -25,7 +25,6 @@ public class RegistrationService {
         return s;
     }
 
-    // 간단: 컨트롤러 단에서 커밋 후 크롤을 호출하도록 위임 (이벤트 대신 명시 호출)
 }
 
 
