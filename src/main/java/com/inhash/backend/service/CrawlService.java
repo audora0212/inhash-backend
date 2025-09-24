@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -65,18 +66,20 @@ public class CrawlService {
         int imported = 0;
         String outputPath = null;
         try {
-            if (workingDir == null || workingDir.isBlank()) throw new IllegalStateException("workingDir not configured");
             if (pythonExe == null || pythonExe.isBlank()) throw new IllegalStateException("python executable not configured");
             if (script == null || script.isBlank()) throw new IllegalStateException("python script not configured");
 
+            Path resolvedWorking = resolveWorkingDir(workingDir);
+            File resolvedDirFile = resolvedWorking.toFile();
+
             // 작업별 output 경로를 분리하여 동시 실행 충돌 방지
-            outputPath = Path.of(workingDir, "output", "final-" + UUID.randomUUID() + ".json").toString();
+            outputPath = resolvedWorking.resolve("output").resolve("final-" + UUID.randomUUID() + ".json").toString();
             // ensure parent directory exists
             try {
-                Files.createDirectories(Path.of(workingDir, "output"));
+                Files.createDirectories(resolvedWorking.resolve("output"));
             } catch (Exception ignore) {}
             ProcessBuilder pb = new ProcessBuilder(pythonExe, script);
-            pb.directory(new File(workingDir));
+            pb.directory(resolvedDirFile);
             pb.redirectErrorStream(true);
             // 강제 UTF-8 콘솔 인코딩 설정(Windows cp949 Unicode 에러 방지)
             pb.environment().put("PYTHONIOENCODING", "utf-8");
@@ -200,6 +203,17 @@ public class CrawlService {
             } catch (Exception ignore) {}
         }
         return imported;
+    }
+
+    private static Path resolveWorkingDir(String configured) {
+        if (configured == null || configured.isBlank()) {
+            // default: project-relative crawler
+            return Paths.get("crawler").toAbsolutePath().normalize();
+        }
+        Path p = Paths.get(configured);
+        if (p.isAbsolute()) return p;
+        // treat as relative to current working dir (usually project root when running via gradle bootRun/jar)
+        return p.toAbsolutePath().normalize();
     }
 
     private static String optText(JsonNode n, String f) {
