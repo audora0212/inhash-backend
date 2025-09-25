@@ -3,9 +3,11 @@ package com.inhash.backend.controller;
 import com.inhash.backend.domain.Student;
 import com.inhash.backend.repository.StudentRepository;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,7 +17,6 @@ import java.util.UUID;
 public class AuthController {
     
     private final StudentRepository studentRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     public AuthController(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
@@ -40,7 +41,7 @@ public class AuthController {
             Student student = new Student();
             student.setEmail(request.getEmail());
             student.setName(request.getName());
-            student.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            student.setPasswordHash(hashPassword(request.getPassword()));
             
             student = studentRepository.save(student);
             
@@ -81,7 +82,7 @@ public class AuthController {
             }
             
             // 비밀번호 확인
-            if (!passwordEncoder.matches(request.getPassword(), student.getPasswordHash())) {
+            if (!verifyPassword(request.getPassword(), student.getPasswordHash())) {
                 response.put("success", false);
                 response.put("error", "이메일 또는 비밀번호가 일치하지 않습니다.");
                 return ResponseEntity.badRequest().body(response);
@@ -136,5 +137,26 @@ public class AuthController {
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+    }
+    
+    /**
+     * 비밀번호 해시 생성 (SHA-256 + Base64)
+     */
+    private String hashPassword(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to hash password", e);
+        }
+    }
+    
+    /**
+     * 비밀번호 검증
+     */
+    private boolean verifyPassword(String password, String hashedPassword) {
+        String hashed = hashPassword(password);
+        return hashed.equals(hashedPassword);
     }
 }

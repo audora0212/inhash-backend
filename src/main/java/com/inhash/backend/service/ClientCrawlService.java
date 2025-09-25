@@ -68,20 +68,24 @@ public class ClientCrawlService {
             // 과목 정보 처리
             if (data.getCourses() != null) {
                 for (ClientCrawlDataDto.CourseDto courseDto : data.getCourses()) {
-                    String courseId = digest(courseDto.getName());
-                    Course existingCourse = courseRepository.findById(courseId).orElse(null);
-                    if (existingCourse == null) {
-                        Course course = new Course();
-                        course.setId(courseId);
-                        course.setName(courseDto.getName());
-                        course.setMainLink(courseDto.getMainLink());
-                        courseRepository.save(course);
-                    } else {
-                        // 기존 과목 정보 업데이트
-                        if (courseDto.getMainLink() != null) {
-                            existingCourse.setMainLink(courseDto.getMainLink());
-                            courseRepository.save(existingCourse);
+                    try {
+                        String courseId = digest(courseDto.getName());
+                        Course existingCourse = courseRepository.findById(courseId).orElse(null);
+                        if (existingCourse == null) {
+                            Course course = new Course();
+                            course.setId(courseId);
+                            course.setName(courseDto.getName());
+                            course.setMainLink(courseDto.getMainLink());
+                            courseRepository.save(course);
+                        } else {
+                            // 기존 과목 정보 업데이트
+                            if (courseDto.getMainLink() != null && !courseDto.getMainLink().equals(existingCourse.getMainLink())) {
+                                existingCourse.setMainLink(courseDto.getMainLink());
+                                courseRepository.save(existingCourse);
+                            }
                         }
+                    } catch (Exception e) {
+                        System.err.println("Failed to process course: " + courseDto.getName() + " - " + e.getMessage());
                     }
                 }
             }
@@ -94,11 +98,16 @@ public class ClientCrawlService {
             Instant nowKst = Instant.now();
             Instant oneMonthLater = nowKst.plus(30, java.time.temporal.ChronoUnit.DAYS);
             
-            // 기존 학생의 과제/수업 삭제 (새 데이터로 대체)
-            assignmentRepository.deleteByStudent(student);
-            lectureRepository.deleteByStudent(student);
-            assignmentRepository.flush();
-            lectureRepository.flush();
+                // 기존 학생의 과제/수업 삭제 (새 데이터로 대체)
+                try {
+                    assignmentRepository.deleteByStudent(student);
+                    lectureRepository.deleteByStudent(student);
+                    assignmentRepository.flush();
+                    lectureRepository.flush();
+                } catch (Exception e) {
+                    // 삭제 실패 시 로그만 남기고 계속 진행
+                    System.err.println("Failed to delete existing data: " + e.getMessage());
+                }
             
             if (data.getItems() != null) {
                 for (ClientCrawlDataDto.ItemDto item : data.getItems()) {
@@ -133,27 +142,37 @@ public class ClientCrawlService {
                                          courseId + "|" + studentId + "|" + 
                                          (item.getDue() != null ? item.getDue() : "NO_DUE"));
                     
-                    if ("assignment".equalsIgnoreCase(item.getType())) {
-                        Assignment assignment = new Assignment();
-                        assignment.setId(id);
-                        assignment.setCourse(course);
-                        assignment.setTitle(item.getTitle());
-                        assignment.setUrl(item.getUrl());
-                        assignment.setDueAt(dueAt);
-                        assignment.setStudent(student);
-                        assignmentRepository.save(assignment);
-                        imported++;
-                    } else if ("class".equalsIgnoreCase(item.getType())) {
-                        Lecture lecture = new Lecture();
-                        lecture.setId(id);
-                        lecture.setCourse(course);
-                        lecture.setTitle(item.getTitle());
-                        lecture.setUrl(item.getUrl());
-                        lecture.setDueAt(dueAt);
-                        lecture.setStudent(student);
-                        lectureRepository.save(lecture);
-                        imported++;
-                    }
+                        if ("assignment".equalsIgnoreCase(item.getType())) {
+                            // 기존 항목이 있는지 확인
+                            if (!assignmentRepository.existsById(id)) {
+                                Assignment assignment = new Assignment();
+                                assignment.setId(id);
+                                assignment.setCourse(course);
+                                assignment.setTitle(item.getTitle());
+                                assignment.setUrl(item.getUrl());
+                                assignment.setDueAt(dueAt);
+                                assignment.setStudent(student);
+                                assignmentRepository.save(assignment);
+                                imported++;
+                            } else {
+                                System.out.println("Assignment already exists: " + item.getTitle());
+                            }
+                        } else if ("class".equalsIgnoreCase(item.getType()) || "lecture".equalsIgnoreCase(item.getType())) {
+                            // 기존 항목이 있는지 확인
+                            if (!lectureRepository.existsById(id)) {
+                                Lecture lecture = new Lecture();
+                                lecture.setId(id);
+                                lecture.setCourse(course);
+                                lecture.setTitle(item.getTitle());
+                                lecture.setUrl(item.getUrl());
+                                lecture.setDueAt(dueAt);
+                                lecture.setStudent(student);
+                                lectureRepository.save(lecture);
+                                imported++;
+                            } else {
+                                System.out.println("Lecture already exists: " + item.getTitle());
+                            }
+                        }
                 }
             }
             
