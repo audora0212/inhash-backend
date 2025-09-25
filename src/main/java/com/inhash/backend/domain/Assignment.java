@@ -13,6 +13,7 @@ import java.time.Instant;
 @Table(name = "assignments")
 public class Assignment {
     @Id
+    @Column(length = 255)
     /**
      * 과제 식별자.
      * 외부 LMS의 인스턴스 ID나 (제목|URL|코스|학생) 조합의 해시를 사용합니다.
@@ -23,7 +24,9 @@ public class Assignment {
     @ManyToOne(optional = false)
     @JsonIgnore
     private Student student;
+    @Column(length = 500)
     private String title;
+    @Column(length = 1000)
     private String url;
     private Instant dueAt;
 

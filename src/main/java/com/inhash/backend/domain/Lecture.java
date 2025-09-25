@@ -13,6 +13,7 @@ import java.time.Instant;
 @Table(name = "lectures")
 public class Lecture {
     @Id
+    @Column(length = 255)
     /** 강의(차시) 식별자: 외부 인스턴스 ID 또는 (제목|URL|코스|학생) 해시 */
     private String id; // lmsInstanceId or URL hash
     @ManyToOne(optional = false)
@@ -20,7 +21,9 @@ public class Lecture {
     @ManyToOne(optional = false)
     @JsonIgnore
     private Student student;
+    @Column(length = 500)
     private String title;
+    @Column(length = 1000)
     private String url;
     private Instant dueAt;
 

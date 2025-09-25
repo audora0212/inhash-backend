@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, String> {
     List<Assignment> findByStudentId(Long studentId);
+    List<Assignment> findByStudent(Student student);
     
     @Modifying
     @Transactional

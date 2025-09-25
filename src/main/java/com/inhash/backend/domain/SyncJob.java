@@ -17,10 +17,11 @@ public class SyncJob {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String jobId;
 
     private Long studentId;
+    @Column(length = 50)
     private String status; // queued, running, completed, failed
     private Integer imported;
     @Lob

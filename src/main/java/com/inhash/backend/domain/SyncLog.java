@@ -15,7 +15,9 @@ import java.time.Instant;
 public class SyncLog {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(length = 255)
     private String source;
+    @Column(length = 50)
     private String status;
     @Lob
     private String message;

@@ -15,7 +15,7 @@ public class FcmToken {
     private Long id;
     @ManyToOne(optional = false)
     private Student student;
-    @Column(nullable = false, unique = true, length = 2048)
+    @Column(nullable = false, unique = true, length = 500)
     private String token;
     private Instant createdAt = Instant.now();
 

@@ -35,6 +35,12 @@ public class ClientCrawlController {
             @RequestBody ClientCrawlDataDto data) {
         
         try {
+            System.out.println("=== Received crawl data for student: " + studentId);
+            System.out.println("Client version: " + data.getClientVersion());
+            System.out.println("Client platform: " + data.getClientPlatform());
+            System.out.println("Courses count: " + (data.getCourses() != null ? data.getCourses().size() : 0));
+            System.out.println("Items count: " + (data.getItems() != null ? data.getItems().size() : 0));
+            
             int imported = clientCrawlService.processCrawlData(studentId, data);
             
             Map<String, Object> response = new HashMap<>();
@@ -42,12 +48,16 @@ public class ClientCrawlController {
             response.put("imported", imported);
             response.put("message", "데이터가 성공적으로 업데이트되었습니다.");
             
+            System.out.println("Successfully processed " + imported + " items");
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            System.err.println("=== Error processing crawl data: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("error", e.getMessage());
+            error.put("error", "Failed to process crawl data");
             
             return ResponseEntity.badRequest().body(error);
         }

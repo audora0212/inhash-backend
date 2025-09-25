@@ -11,6 +11,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 /**
@@ -50,34 +51,54 @@ public class ClientCrawlService {
         try {
             Student student = studentRepository.findById(studentId).orElse(null);
             if (student == null) {
-                // 테스트/초기 온보딩 편의: 학생이 없으면 임시로 생성
-                Student ns = new Student();
-                ns.setEmail("client-" + String.valueOf(studentId) + "@local");
-                ns.setName("Client " + String.valueOf(studentId));
-                student = studentRepository.save(ns);
+                // 이메일로 먼저 조회 (중복 방지)
+                String email = "client-" + String.valueOf(studentId) + "@local";
+                student = studentRepository.findByEmail(email).orElse(null);
+                
+                if (student == null) {
+                    // 테스트/초기 온보딩 편의: 학생이 없으면 임시로 생성
+                    Student ns = new Student();
+                    ns.setEmail(email);
+                    ns.setName("Client " + String.valueOf(studentId));
+                    ns.setPasswordHash("NOT_USED"); // 클라이언트 크롤링에서는 사용 안 함
+                    student = studentRepository.save(ns);
+                }
             }
             
             // 과목 정보 처리
             if (data.getCourses() != null) {
                 for (ClientCrawlDataDto.CourseDto courseDto : data.getCourses()) {
                     String courseId = digest(courseDto.getName());
-                    courseRepository.findById(courseId).orElseGet(() -> {
+                    Course existingCourse = courseRepository.findById(courseId).orElse(null);
+                    if (existingCourse == null) {
                         Course course = new Course();
                         course.setId(courseId);
                         course.setName(courseDto.getName());
                         course.setMainLink(courseDto.getMainLink());
-                        return courseRepository.save(course);
-                    });
+                        courseRepository.save(course);
+                    } else {
+                        // 기존 과목 정보 업데이트
+                        if (courseDto.getMainLink() != null) {
+                            existingCourse.setMainLink(courseDto.getMainLink());
+                            courseRepository.save(existingCourse);
+                        }
+                    }
                 }
             }
+            
+            // 트랜잭션 플러시 (과목 저장 확정)
+            courseRepository.flush();
             
             // 과제 및 수업 정보 처리
             int imported = 0;
             Instant nowKst = Instant.now();
+            Instant oneMonthLater = nowKst.plus(30, java.time.temporal.ChronoUnit.DAYS);
             
             // 기존 학생의 과제/수업 삭제 (새 데이터로 대체)
             assignmentRepository.deleteByStudent(student);
             lectureRepository.deleteByStudent(student);
+            assignmentRepository.flush();
+            lectureRepository.flush();
             
             if (data.getItems() != null) {
                 for (ClientCrawlDataDto.ItemDto item : data.getItems()) {
@@ -86,12 +107,13 @@ public class ClientCrawlService {
                     }
                     
                     String courseId = digest(item.getCourseName());
-                    Course course = courseRepository.findById(courseId).orElseGet(() -> {
-                        Course c = new Course();
-                        c.setId(courseId);
-                        c.setName(item.getCourseName());
-                        return courseRepository.save(c);
-                    });
+                    Course course = courseRepository.findById(courseId).orElse(null);
+                    if (course == null) {
+                        course = new Course();
+                        course.setId(courseId);
+                        course.setName(item.getCourseName());
+                        course = courseRepository.save(course);
+                    }
                     
                     Instant dueAt = parseDue(item.getDue());
                     
@@ -100,9 +122,16 @@ public class ClientCrawlService {
                         continue;
                     }
                     
-                    String id = digest(item.getTitle() + "|" + 
-                                     (item.getUrl() == null ? "" : item.getUrl()) + "|" + 
-                                     courseId + "|" + studentId);
+                    // 1달 이후 마감 항목 제외
+                    if (dueAt != null && dueAt.isAfter(oneMonthLater)) {
+                        continue;
+                    }
+                    
+                        // ID 생성 시 URL이 null인 경우 처리 개선
+                        String urlPart = item.getUrl() != null ? item.getUrl() : "NO_URL_" + item.getTitle();
+                        String id = digest(item.getTitle() + "|" + urlPart + "|" + 
+                                         courseId + "|" + studentId + "|" + 
+                                         (item.getDue() != null ? item.getDue() : "NO_DUE"));
                     
                     if ("assignment".equalsIgnoreCase(item.getType())) {
                         Assignment assignment = new Assignment();
@@ -171,10 +200,27 @@ public class ClientCrawlService {
         if (due == null || due.isBlank()) return null;
         try {
             String norm = due.trim();
-            if (norm.length() == 16) norm = norm + ":00";
-            LocalDateTime ldt = LocalDateTime.parse(norm.replace(' ', 'T'));
+            
+            // 다양한 날짜 형식 처리
+            LocalDateTime ldt;
+            
+            if (norm.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
+                // YYYY-MM-DD HH:MM:SS 형식
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                ldt = LocalDateTime.parse(norm, formatter);
+            } else if (norm.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) {
+                // YYYY-MM-DD HH:MM 형식 (초 없음)
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                ldt = LocalDateTime.parse(norm, formatter);
+            } else {
+                // ISO 형식으로 시도 (T 구분자 사용)
+                if (norm.length() == 16) norm = norm + ":00";
+                ldt = LocalDateTime.parse(norm.replace(' ', 'T'));
+            }
+            
             return ldt.atZone(ZoneId.of("Asia/Seoul")).toInstant();
         } catch (Exception e) {
+            System.err.println("Failed to parse date: " + due + " - " + e.getMessage());
             return null;
         }
     }

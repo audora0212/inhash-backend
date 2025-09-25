@@ -11,8 +11,11 @@ import jakarta.persistence.*;
 @Table(name = "courses")
 public class Course {
     @Id
+    @Column(length = 255)
     private String id; // lmsId
+    @Column(length = 500)
     private String name;
+    @Column(length = 1000)
     private String mainLink;
 
     public String getId() { return id; }

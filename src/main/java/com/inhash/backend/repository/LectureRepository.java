@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface LectureRepository extends JpaRepository<Lecture, String> {
     List<Lecture> findByStudentId(Long studentId);
+    List<Lecture> findByStudent(Student student);
     
     @Modifying
     @Transactional
