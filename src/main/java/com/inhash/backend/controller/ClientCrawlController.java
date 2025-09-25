@@ -23,6 +23,30 @@ public class ClientCrawlController {
     }
     
     /**
+     * 학생 데이터 삭제
+     */
+    @DeleteMapping("/delete/{studentId}")
+    public ResponseEntity<Map<String, Object>> deleteStudentData(@PathVariable Long studentId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            boolean deleted = clientCrawlService.deleteStudentData(studentId);
+            if (deleted) {
+                response.put("success", true);
+                response.put("message", "학생 데이터가 삭제되었습니다.");
+            } else {
+                response.put("success", false);
+                response.put("error", "학생을 찾을 수 없습니다.");
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "데이터 삭제 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+    
+    /**
      * 클라이언트에서 크롤링한 데이터 수신 및 처리
      * 
      * @param studentId 학생 ID (인증된 사용자)

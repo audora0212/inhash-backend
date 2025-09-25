@@ -43,6 +43,24 @@ public class ClientCrawlService {
         this.syncLogRepository = syncLogRepository;
     }
     
+    /**
+     * 학생 데이터 삭제
+     */
+    @Transactional
+    public boolean deleteStudentData(Long studentId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) {
+            return false;
+        }
+        
+        // 학생의 모든 과제와 수업 삭제
+        assignmentRepository.deleteByStudent(student);
+        lectureRepository.deleteByStudent(student);
+        
+        System.out.println("Deleted all data for student: " + studentId);
+        return true;
+    }
+    
     @Transactional
     public int processCrawlData(Long studentId, ClientCrawlDataDto data) {
         SyncLog log = new SyncLog();
