@@ -39,3 +39,4 @@ public interface StudentUpdateStatusRepository extends JpaRepository<StudentUpda
     List<StudentUpdateStatus> findNotificationTargets(Instant lastUpdateBefore, Instant lastNotificationBefore);
 }
 
+

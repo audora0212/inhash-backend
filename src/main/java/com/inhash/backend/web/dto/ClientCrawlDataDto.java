@@ -70,3 +70,4 @@ public class ClientCrawlDataDto {
     public void setItems(List<ItemDto> items) { this.items = items; }
 }
 
+

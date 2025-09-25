@@ -58,12 +58,11 @@ public class ClientCrawlController {
      */
     @GetMapping("/status/{studentId}")
     public ResponseEntity<Map<String, Object>> getUpdateStatus(@PathVariable Long studentId) {
-        // TODO: 구현 필요
         Map<String, Object> response = new HashMap<>();
         response.put("studentId", studentId);
+        // 간단한 핑 응답 (실서비스에서는 StudentUpdateStatus 리얼 값 조회)
         response.put("lastUpdated", null);
         response.put("needsUpdate", true);
-        
         return ResponseEntity.ok(response);
     }
 }

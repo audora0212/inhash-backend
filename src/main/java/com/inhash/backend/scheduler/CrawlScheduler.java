@@ -28,6 +28,7 @@ public class CrawlScheduler {
      * @deprecated 클라이언트 크롤링으로 전환
      */
     @Scheduled(cron = "${inhash.scheduler.cron}")
+    @Deprecated
     public void scheduledCrawl() {
         if (!enabled || !crawlEnabled) return;
         crawlService.runCrawlAndImport();

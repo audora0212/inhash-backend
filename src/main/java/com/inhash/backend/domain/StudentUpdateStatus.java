@@ -67,3 +67,4 @@ public class StudentUpdateStatus {
     public void setClientPlatform(String clientPlatform) { this.clientPlatform = clientPlatform; }
 }
 
+
