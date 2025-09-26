@@ -19,8 +19,8 @@ public class Assignment {
      * 외부 LMS의 인스턴스 ID나 (제목|URL|코스|학생) 조합의 해시를 사용합니다.
      */
     private String id; // lmsInstanceId or URL hash
-    @ManyToOne(optional = false)
-    private Course course;
+    @Column(length = 200)
+    private String courseName;  // 과목명 직접 저장
     @ManyToOne(optional = false)
     @JsonIgnore
     private Student student;
@@ -32,8 +32,10 @@ public class Assignment {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public Course getCourse() { return course; }
-    public void setCourse(Course course) { this.course = course; }
+    public String getCourseName() { return courseName; }
+    public void setCourseName(String courseName) { 
+        this.courseName = courseName;
+    }
     public Student getStudent() { return student; }
     public void setStudent(Student student) { this.student = student; }
     public String getTitle() { return title; }

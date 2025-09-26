@@ -22,7 +22,7 @@ import java.util.Objects;
 public class ClientCrawlService {
     
     private final StudentRepository studentRepository;
-    private final CourseRepository courseRepository;
+    // Course 테이블 더 이상 사용하지 않음
     private final AssignmentRepository assignmentRepository;
     private final LectureRepository lectureRepository;
     private final StudentUpdateStatusRepository updateStatusRepository;
@@ -30,17 +30,43 @@ public class ClientCrawlService {
     
     public ClientCrawlService(
             StudentRepository studentRepository,
-            CourseRepository courseRepository,
             AssignmentRepository assignmentRepository,
             LectureRepository lectureRepository,
             StudentUpdateStatusRepository updateStatusRepository,
             SyncLogRepository syncLogRepository) {
         this.studentRepository = studentRepository;
-        this.courseRepository = courseRepository;
         this.assignmentRepository = assignmentRepository;
         this.lectureRepository = lectureRepository;
         this.updateStatusRepository = updateStatusRepository;
         this.syncLogRepository = syncLogRepository;
+    }
+    
+    /**
+     * 과목명 정리 (불필요한 접두사 제거)
+     */
+    private String cleanCourseName(String courseName) {
+        if (courseName == null) return "";
+        
+        // 제거할 접두사 패턴들
+        String[] prefixesToRemove = {
+            "비러닝학부",
+            "오프라인학부",
+            "원격활용학부",
+            "블렌디드러닝학부",
+            "온라인학부",
+            "비대면학부",
+            "대면학부"
+        };
+        
+        String cleaned = courseName;
+        for (String prefix : prefixesToRemove) {
+            if (cleaned.startsWith(prefix)) {
+                cleaned = cleaned.substring(prefix.length()).trim();
+                break;
+            }
+        }
+        
+        return cleaned;
     }
     
     /**
@@ -83,36 +109,24 @@ public class ClientCrawlService {
                 }
             }
             
-            // 과목 정보 처리
-            if (data.getCourses() != null) {
-                for (ClientCrawlDataDto.CourseDto courseDto : data.getCourses()) {
-                    try {
-                        String courseId = digest(courseDto.getName());
-                        Course existingCourse = courseRepository.findById(courseId).orElse(null);
-                        if (existingCourse == null) {
-                            Course course = new Course();
-                            course.setId(courseId);
-                            course.setName(courseDto.getName());
-                            course.setMainLink(courseDto.getMainLink());
-                            courseRepository.save(course);
-                        } else {
-                            // 기존 과목 정보 업데이트
-                            if (courseDto.getMainLink() != null && !courseDto.getMainLink().equals(existingCourse.getMainLink())) {
-                                existingCourse.setMainLink(courseDto.getMainLink());
-                                courseRepository.save(existingCourse);
-                            }
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Failed to process course: " + courseDto.getName() + " - " + e.getMessage());
-                    }
-                }
-            }
+            // 과목 정보는 더 이상 별도 테이블에 저장하지 않음
+            // Assignment와 Lecture에 과목명을 직접 저장
             
-            // 트랜잭션 플러시 (과목 저장 확정)
-            courseRepository.flush();
+            // 디버깅: 받은 데이터 확인
+            if (data.getItems() != null && !data.getItems().isEmpty()) {
+                System.out.println("\n=== First 10 items from client ===");
+                int debugCount = 0;
+                for (ClientCrawlDataDto.ItemDto item : data.getItems()) {
+                    if (debugCount++ >= 10) break;
+                    System.out.println(String.format("  [%s] %s -> Course: '%s'", 
+                        item.getType(), item.getTitle(), item.getCourseName()));
+                }
+                System.out.println();
+            }
             
             // 과제 및 수업 정보 처리
             int imported = 0;
+            int debugIdCount = 0; // ID 디버깅용 카운터
             Instant nowKst = Instant.now();
             Instant oneMonthLater = nowKst.plus(30, java.time.temporal.ChronoUnit.DAYS);
             
@@ -133,13 +147,27 @@ public class ClientCrawlService {
                         continue;
                     }
                     
-                    String courseId = digest(item.getCourseName());
-                    Course course = courseRepository.findById(courseId).orElse(null);
-                    if (course == null) {
-                        course = new Course();
-                        course.setId(courseId);
-                        course.setName(item.getCourseName());
-                        course = courseRepository.save(course);
+                    // 과목명 정리 (불필요한 접두사 제거)
+                    String originalCourseName = item.getCourseName();
+                    String cleanedCourseName = cleanCourseName(originalCourseName);
+                    
+                    // 과목명에서 코드 부분만 추출 (더 짧고 명확하게)
+                    // 예: "디지털논리회로[202502-EEC2106-001]박재현" -> "디지털논리회로"
+                    int bracketIndex = cleanedCourseName.indexOf('[');
+                    if (bracketIndex > 0) {
+                        cleanedCourseName = cleanedCourseName.substring(0, bracketIndex).trim();
+                    }
+                    
+                    // 과목명 길이 제한 (50자로 늘림)
+                    if (cleanedCourseName.length() > 50) {
+                        cleanedCourseName = cleanedCourseName.substring(0, 50);
+                    }
+                    
+                    // 디버깅: 실제 과목 매칭 상황 확인
+                    if (item.getTitle().toLowerCase().contains("vivado")) {
+                        System.out.println("📍 Found 'vivado' item: '" + item.getTitle() + 
+                            "' from original course: '" + originalCourseName + 
+                            "' -> cleaned: '" + cleanedCourseName + "'");
                     }
                     
                     Instant dueAt = parseDue(item.getDue());
@@ -154,41 +182,78 @@ public class ClientCrawlService {
                         continue;
                     }
                     
-                        // ID 생성 시 URL이 null인 경우 처리 개선
-                        String urlPart = item.getUrl() != null ? item.getUrl() : "NO_URL_" + item.getTitle();
-                        String id = digest(item.getTitle() + "|" + urlPart + "|" + 
-                                         courseId + "|" + studentId + "|" + 
-                                         (item.getDue() != null ? item.getDue() : "NO_DUE"));
+                    // 고유 ID 생성 - 제목, 학생ID, 과목명, 마감일로 생성
+                    // 과목명도 포함하여 같은 제목이라도 다른 과목이면 다른 ID
+                    String idSource = item.getTitle() + "|" + cleanedCourseName + "|" + studentId + "|" + 
+                                    (item.getDue() != null ? item.getDue() : "NO_DUE");
+                    String id = digest(idSource);
+                    
+                    // 디버깅: ID 생성 확인 (처음 몇 개만)
+                    if (debugIdCount++ < 5) {
+                        System.out.println("ID Source: " + idSource + " -> ID: " + id);
+                    }
                     
                         if ("assignment".equalsIgnoreCase(item.getType())) {
-                            // 기존 항목이 있는지 확인
-                            if (!assignmentRepository.existsById(id)) {
-                                Assignment assignment = new Assignment();
-                                assignment.setId(id);
-                                assignment.setCourse(course);
-                                assignment.setTitle(item.getTitle());
-                                assignment.setUrl(item.getUrl());
-                                assignment.setDueAt(dueAt);
-                                assignment.setStudent(student);
-                                assignmentRepository.save(assignment);
-                                imported++;
-                            } else {
-                                System.out.println("Assignment already exists: " + item.getTitle());
+                            try {
+                                Assignment existing = assignmentRepository.findById(id).orElse(null);
+                                if (existing == null) {
+                                    // 새로운 과제 생성
+                                    Assignment assignment = new Assignment();
+                                    assignment.setId(id);
+                                    assignment.setCourseName(cleanedCourseName);
+                                    assignment.setTitle(item.getTitle());
+                                    assignment.setUrl(null); // URL 저장하지 않음 (개인정보 보호)
+                                    assignment.setDueAt(dueAt);
+                                    assignment.setStudent(student);
+                                    assignmentRepository.saveAndFlush(assignment);
+                                    imported++;
+                                    System.out.println("✓ Saved assignment: " + item.getTitle() + " -> " + cleanedCourseName);
+                                } else {
+                                    // 이미 존재하는 경우 업데이트만
+                                    if (!cleanedCourseName.equals(existing.getCourseName())) {
+                                        System.out.println("⚠ Assignment '" + item.getTitle() + 
+                                            "' already in: " + existing.getCourseName() + 
+                                            " (not " + cleanedCourseName + ")");
+                                    }
+                                    // 마감일 업데이트
+                                    if (dueAt != null && !dueAt.equals(existing.getDueAt())) {
+                                        existing.setDueAt(dueAt);
+                                        assignmentRepository.save(existing);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Error saving assignment: " + item.getTitle() + " - " + e.getMessage());
                             }
                         } else if ("class".equalsIgnoreCase(item.getType()) || "lecture".equalsIgnoreCase(item.getType())) {
-                            // 기존 항목이 있는지 확인
-                            if (!lectureRepository.existsById(id)) {
-                                Lecture lecture = new Lecture();
-                                lecture.setId(id);
-                                lecture.setCourse(course);
-                                lecture.setTitle(item.getTitle());
-                                lecture.setUrl(item.getUrl());
-                                lecture.setDueAt(dueAt);
-                                lecture.setStudent(student);
-                                lectureRepository.save(lecture);
-                                imported++;
-                            } else {
-                                System.out.println("Lecture already exists: " + item.getTitle());
+                            try {
+                                Lecture existing = lectureRepository.findById(id).orElse(null);
+                                if (existing == null) {
+                                    // 새로운 강의 생성
+                                    Lecture lecture = new Lecture();
+                                    lecture.setId(id);
+                                    lecture.setCourseName(cleanedCourseName);
+                                    lecture.setTitle(item.getTitle());
+                                    lecture.setUrl(null); // URL 저장하지 않음 (개인정보 보호)
+                                    lecture.setDueAt(dueAt);
+                                    lecture.setStudent(student);
+                                    lectureRepository.saveAndFlush(lecture);
+                                    imported++;
+                                    System.out.println("✓ Saved lecture: " + item.getTitle() + " -> " + cleanedCourseName);
+                                } else {
+                                    // 이미 존재하는 경우 업데이트만
+                                    if (!cleanedCourseName.equals(existing.getCourseName())) {
+                                        System.out.println("⚠ Lecture '" + item.getTitle() + 
+                                            "' already in: " + existing.getCourseName() + 
+                                            " (not " + cleanedCourseName + ")");
+                                    }
+                                    // 마감일 업데이트
+                                    if (dueAt != null && !dueAt.equals(existing.getDueAt())) {
+                                        existing.setDueAt(dueAt);
+                                        lectureRepository.save(existing);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Error saving lecture: " + item.getTitle() + " - " + e.getMessage());
                             }
                         }
                 }

@@ -161,7 +161,8 @@ public class CrawlService {
                 if ("assignment".equalsIgnoreCase(type)) {
                     Assignment a = new Assignment();
                     a.setId(id);
-                    a.setCourse(course);
+                    a.setCourseName(course != null && course.getName() != null ? 
+                        (course.getName().length() > 20 ? course.getName().substring(0, 20) : course.getName()) : "");
                     a.setTitle(title);
                     a.setUrl(url);
                     a.setDueAt(dueAt);
@@ -171,7 +172,8 @@ public class CrawlService {
                 } else if ("class".equalsIgnoreCase(type)) {
                     Lecture l = new Lecture();
                     l.setId(id);
-                    l.setCourse(course);
+                    l.setCourseName(course != null && course.getName() != null ? 
+                        (course.getName().length() > 20 ? course.getName().substring(0, 20) : course.getName()) : "");
                     l.setTitle(title);
                     l.setUrl(url);
                     l.setDueAt(dueAt);

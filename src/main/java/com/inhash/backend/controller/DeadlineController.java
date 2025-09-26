@@ -143,7 +143,7 @@ public class DeadlineController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", assignment.getId());
         map.put("title", assignment.getTitle());
-        map.put("courseName", assignment.getCourse() != null ? assignment.getCourse().getName() : "");
+        map.put("courseName", assignment.getCourseName() != null ? assignment.getCourseName() : "");
         map.put("url", assignment.getUrl());
         
         if (assignment.getDueAt() != null) {
@@ -165,7 +165,7 @@ public class DeadlineController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", lecture.getId());
         map.put("title", lecture.getTitle());
-        map.put("courseName", lecture.getCourse() != null ? lecture.getCourse().getName() : "");
+        map.put("courseName", lecture.getCourseName() != null ? lecture.getCourseName() : "");
         map.put("url", lecture.getUrl());
         
         if (lecture.getDueAt() != null) {
