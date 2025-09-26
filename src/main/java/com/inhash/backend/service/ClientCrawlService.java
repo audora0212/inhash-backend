@@ -12,9 +12,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 클라이언트에서 크롤링한 데이터를 처리하는 서비스
@@ -87,33 +85,6 @@ public class ClientCrawlService {
         
         System.out.println("Deleted all data for student: " + studentId);
         return true;
-    }
-    
-    /**
-     * 지난 과제/수업 삭제
-     */
-    private void deleteExpiredItems(Student student) {
-        Instant now = Instant.now();
-        
-        // 지난 과제 삭제
-        List<Assignment> expiredAssignments = assignmentRepository.findByStudent(student).stream()
-            .filter(a -> a.getDueAt() != null && a.getDueAt().isBefore(now))
-            .collect(Collectors.toList());
-        
-        if (!expiredAssignments.isEmpty()) {
-            assignmentRepository.deleteAll(expiredAssignments);
-            System.out.println("Deleted " + expiredAssignments.size() + " expired assignments for student " + student.getId());
-        }
-        
-        // 지난 수업 삭제
-        List<Lecture> expiredLectures = lectureRepository.findByStudent(student).stream()
-            .filter(l -> l.getDueAt() != null && l.getDueAt().isBefore(now))
-            .collect(Collectors.toList());
-        
-        if (!expiredLectures.isEmpty()) {
-            lectureRepository.deleteAll(expiredLectures);
-            System.out.println("Deleted " + expiredLectures.size() + " expired lectures for student " + student.getId());
-        }
     }
     
     @Transactional
@@ -294,9 +265,6 @@ public class ClientCrawlService {
             if (status.getStudent() == null) {
                 status.setStudent(student);
             }
-            
-            // 지난 과제/수업 삭제
-            deleteExpiredItems(student);
             
             status.setLastUpdatedAt(Instant.now());
             status.setClientVersion(data.getClientVersion());

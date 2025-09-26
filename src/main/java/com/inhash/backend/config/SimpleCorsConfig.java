@@ -33,21 +33,12 @@ public class SimpleCorsConfig {
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                 throws ServletException, IOException {
             
-            String origin = request.getHeader("Origin");
-            
-            // Allow specific origins
-            if (origin != null && (
-                origin.equals("http://localhost:3000") ||
-                origin.equals("http://localhost:3001") ||
-                origin.equals("http://127.0.0.1:3000") ||
-                origin.equals("http://127.0.0.1:3001")
-            )) {
-                response.setHeader("Access-Control-Allow-Origin", origin);
-            }
-            
+            // Allow all origins for mobile apps (iOS doesn't send standard Origin header)
+            response.setHeader("Access-Control-Allow-Origin", "*");
             response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
             response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
-            response.setHeader("Access-Control-Allow-Credentials", "true");
+            // Remove credentials when allowing all origins
+            // response.setHeader("Access-Control-Allow-Credentials", "true");
             response.setHeader("Access-Control-Max-Age", "3600");
             
             // Handle preflight requests

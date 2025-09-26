@@ -2,10 +2,8 @@ package com.inhash.backend.controller;
 
 import com.inhash.backend.domain.Student;
 import com.inhash.backend.repository.StudentRepository;
-import com.inhash.backend.service.ClientCrawlService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Optional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,11 +17,9 @@ import java.util.UUID;
 public class AuthController {
     
     private final StudentRepository studentRepository;
-    private final ClientCrawlService clientCrawlService;
     
-    public AuthController(StudentRepository studentRepository, ClientCrawlService clientCrawlService) {
+    public AuthController(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
-        this.clientCrawlService = clientCrawlService;
     }
     
     /**
@@ -162,46 +158,5 @@ public class AuthController {
     private boolean verifyPassword(String password, String hashedPassword) {
         String hashed = hashPassword(password);
         return hashed.equals(hashedPassword);
-    }
-    
-    /**
-     * 계정 삭제
-     */
-    @DeleteMapping("/delete")
-    public ResponseEntity<Map<String, Object>> deleteAccount(@RequestBody Map<String, Object> request) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            Long studentId = Long.parseLong(request.get("studentId").toString());
-            
-            // 학생 찾기
-            Optional<Student> studentOpt = studentRepository.findById(studentId);
-            if (studentOpt.isEmpty()) {
-                response.put("success", false);
-                response.put("error", "Student not found");
-                return ResponseEntity.notFound().build();
-            }
-            
-            // 1. 먼저 관련 데이터 모두 삭제 (과제, 수업)
-            boolean dataDeleted = clientCrawlService.deleteStudentData(studentId);
-            if (!dataDeleted) {
-                response.put("success", false);
-                response.put("error", "Failed to delete student data");
-                return ResponseEntity.internalServerError().body(response);
-            }
-            
-            // 2. 학생 계정 삭제
-            Student student = studentOpt.get();
-            studentRepository.delete(student);
-            
-            response.put("success", true);
-            response.put("message", "Account and all related data deleted successfully");
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("error", "Failed to delete account: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
     }
 }
