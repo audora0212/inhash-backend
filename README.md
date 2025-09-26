@@ -1,6 +1,9 @@
 ## INHASH 백엔드
 인하대학교 학생들의 과제와 수업 기한을 자동 수집·저장하고, 마감 전에 FCM 알림을 보내주는 서비스의 백엔드입니다.
 
+> ⚠️ **중요 공지**: 배포 전 반드시 [TODO.md](./TODO.md) 파일을 확인하여 개발용 임시 코드를 삭제하세요!
+> DirectCrawlController와 DirectCrawlService는 개발 환경 전용입니다.
+
 ### 핵심 목표
 - LMS(learn.inha.ac.kr)에서 과제/수업 마감 정보를 수집
 - 사용자 가입 시 LMS 계정 연동과 동시에 백그라운드 동기화 수행
