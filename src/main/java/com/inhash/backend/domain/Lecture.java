@@ -26,6 +26,9 @@ public class Lecture {
     @Column(length = 1000)
     private String url;
     private Instant dueAt;
+    
+    @Column
+    private Boolean completed = false;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -41,6 +44,8 @@ public class Lecture {
     public void setUrl(String url) { this.url = url; }
     public Instant getDueAt() { return dueAt; }
     public void setDueAt(Instant dueAt) { this.dueAt = dueAt; }
+    public Boolean getCompleted() { return completed; }
+    public void setCompleted(Boolean completed) { this.completed = completed; }
 }
 
 

@@ -2,15 +2,23 @@ package com.inhash.backend.service;
 
 import com.inhash.backend.domain.FcmToken;
 import com.inhash.backend.domain.StudentUpdateStatus;
+import com.inhash.backend.domain.Student;
+import com.inhash.backend.domain.Assignment;
+import com.inhash.backend.domain.Lecture;
 import com.inhash.backend.repository.FcmTokenRepository;
 import com.inhash.backend.repository.StudentUpdateStatusRepository;
+import com.inhash.backend.repository.StudentRepository;
+import com.inhash.backend.repository.AssignmentRepository;
+import com.inhash.backend.repository.LectureRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * FCM 푸시 알림 서비스
@@ -22,15 +30,24 @@ public class NotificationService {
     
     private final StudentUpdateStatusRepository updateStatusRepository;
     private final FcmTokenRepository fcmTokenRepository;
+    private final StudentRepository studentRepository;
+    private final AssignmentRepository assignmentRepository;
+    private final LectureRepository lectureRepository;
     
     @Value("${inhash.notification.update-reminder.days:2,4,7}")
     private String updateReminderDays;
     
     public NotificationService(
             StudentUpdateStatusRepository updateStatusRepository,
-            FcmTokenRepository fcmTokenRepository) {
+            FcmTokenRepository fcmTokenRepository,
+            StudentRepository studentRepository,
+            AssignmentRepository assignmentRepository,
+            LectureRepository lectureRepository) {
         this.updateStatusRepository = updateStatusRepository;
         this.fcmTokenRepository = fcmTokenRepository;
+        this.studentRepository = studentRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.lectureRepository = lectureRepository;
     }
     
     /**
@@ -73,8 +90,43 @@ public class NotificationService {
      * 매일 아침 9시 과제/수업 알림
      */
     public void sendDailyReminders() {
-        // TODO: 각 학생의 과제/수업 정보를 조회하여 알림 발송
-        // 이 부분은 기존 로직 활용
+        Instant now = Instant.now();
+        Instant tomorrow = now.plus(1, ChronoUnit.DAYS);
+        
+        // 모든 학생 조회
+        List<Student> students = studentRepository.findAll();
+        
+        for (Student student : students) {
+            // 학생의 FCM 토큰 조회
+            List<FcmToken> tokens = fcmTokenRepository.findByStudent(student);
+            if (tokens.isEmpty()) continue;
+            
+            // 오늘/내일 마감인 미완료 과제 조회
+            List<Assignment> assignments = assignmentRepository.findByStudent(student).stream()
+                .filter(a -> a.getDueAt() != null)
+                .filter(a -> !Boolean.TRUE.equals(a.getCompleted())) // 완료되지 않은 것만
+                .filter(a -> a.getDueAt().isAfter(now) && a.getDueAt().isBefore(tomorrow))
+                .collect(Collectors.toList());
+            
+            // 오늘/내일 마감인 미완료 수업 조회
+            List<Lecture> lectures = lectureRepository.findByStudent(student).stream()
+                .filter(l -> l.getDueAt() != null)
+                .filter(l -> !Boolean.TRUE.equals(l.getCompleted())) // 완료되지 않은 것만
+                .filter(l -> l.getDueAt().isAfter(now) && l.getDueAt().isBefore(tomorrow))
+                .collect(Collectors.toList());
+            
+            // 알림 메시지 생성
+            if (!assignments.isEmpty() || !lectures.isEmpty()) {
+                String title = "📚 오늘의 할 일";
+                String body = String.format("미완료 과제 %d개, 미완료 수업 %d개가 있습니다.", 
+                    assignments.size(), lectures.size());
+                
+                // 각 토큰으로 알림 발송
+                for (FcmToken token : tokens) {
+                    sendFcmNotification(token.getToken(), title, body);
+                }
+            }
+        }
     }
     
     private String getUpdateReminderMessage(int days, int count) {

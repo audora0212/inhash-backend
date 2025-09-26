@@ -145,6 +145,8 @@ public class DeadlineController {
         map.put("title", assignment.getTitle());
         map.put("courseName", assignment.getCourseName() != null ? assignment.getCourseName() : "");
         map.put("url", assignment.getUrl());
+        map.put("completed", assignment.getCompleted() != null ? assignment.getCompleted() : false);
+        map.put("type", "assignment");
         
         if (assignment.getDueAt() != null) {
             map.put("dueAt", formatter.format(assignment.getDueAt()));
@@ -167,6 +169,8 @@ public class DeadlineController {
         map.put("title", lecture.getTitle());
         map.put("courseName", lecture.getCourseName() != null ? lecture.getCourseName() : "");
         map.put("url", lecture.getUrl());
+        map.put("completed", lecture.getCompleted() != null ? lecture.getCompleted() : false);
+        map.put("type", "lecture");
         
         if (lecture.getDueAt() != null) {
             map.put("dueAt", formatter.format(lecture.getDueAt()));
