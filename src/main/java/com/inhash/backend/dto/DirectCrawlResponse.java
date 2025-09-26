@@ -43,3 +43,4 @@ public class DirectCrawlResponse {
         private String url;
     }
 }
+

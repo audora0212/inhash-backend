@@ -8,3 +8,4 @@ public class DirectCrawlRequest {
     private String lmsUsername;
     private String lmsPassword;
 }
+

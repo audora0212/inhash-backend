@@ -85,3 +85,4 @@ curl -X OPTIONS http://localhost:8080/api/auth/login \
 - Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 - Access-Control-Allow-Headers: *
 - Access-Control-Allow-Credentials: true
+
