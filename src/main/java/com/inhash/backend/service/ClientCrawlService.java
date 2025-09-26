@@ -87,6 +87,33 @@ public class ClientCrawlService {
         return true;
     }
     
+    /**
+     * 지난 과제/수업 삭제
+     */
+    private void deleteExpiredItems(Student student) {
+        Instant now = Instant.now();
+        
+        // 지난 과제 삭제
+        List<Assignment> expiredAssignments = assignmentRepository.findByStudent(student).stream()
+            .filter(a -> a.getDueAt() != null && a.getDueAt().isBefore(now))
+            .collect(Collectors.toList());
+        
+        if (!expiredAssignments.isEmpty()) {
+            assignmentRepository.deleteAll(expiredAssignments);
+            System.out.println("Deleted " + expiredAssignments.size() + " expired assignments for student " + student.getId());
+        }
+        
+        // 지난 수업 삭제
+        List<Lecture> expiredLectures = lectureRepository.findByStudent(student).stream()
+            .filter(l -> l.getDueAt() != null && l.getDueAt().isBefore(now))
+            .collect(Collectors.toList());
+        
+        if (!expiredLectures.isEmpty()) {
+            lectureRepository.deleteAll(expiredLectures);
+            System.out.println("Deleted " + expiredLectures.size() + " expired lectures for student " + student.getId());
+        }
+    }
+    
     @Transactional
     public int processCrawlData(Long studentId, ClientCrawlDataDto data) {
         SyncLog log = new SyncLog();
@@ -265,6 +292,9 @@ public class ClientCrawlService {
             if (status.getStudent() == null) {
                 status.setStudent(student);
             }
+            
+            // 지난 과제/수업 삭제
+            deleteExpiredItems(student);
             
             status.setLastUpdatedAt(Instant.now());
             status.setClientVersion(data.getClientVersion());

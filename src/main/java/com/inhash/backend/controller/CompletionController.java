@@ -61,7 +61,7 @@ public class CompletionController {
             if (!assignment.getStudent().getId().equals(student.getId())) {
                 response.put("success", false);
                 response.put("error", "Assignment does not belong to this student");
-                return ResponseEntity.forbidden().build();
+                return ResponseEntity.status(403).body(response);
             }
             
             // 완료 상태 토글
@@ -117,7 +117,7 @@ public class CompletionController {
             if (!lecture.getStudent().getId().equals(student.getId())) {
                 response.put("success", false);
                 response.put("error", "Lecture does not belong to this student");
-                return ResponseEntity.forbidden().build();
+                return ResponseEntity.status(403).body(response);
             }
             
             // 완료 상태 토글
