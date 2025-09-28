@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/deadlines")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"})
 public class DeadlineController {
     
     private final StudentRepository studentRepository;
@@ -77,6 +77,49 @@ public class DeadlineController {
             response.put("lectures", lectures);
             
             System.out.println("Returning " + assignments.size() + " assignments and " + 
+                             lectures.size() + " lectures for student " + studentId);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "데이터 조회 중 오류: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+    
+    /**
+     * 학생의 모든 과제/수업 조회 (마감된 것 포함)
+     */
+    @GetMapping("/{studentId}/all")
+    public ResponseEntity<Map<String, Object>> getAllDeadlines(@PathVariable Long studentId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null) {
+                response.put("success", false);
+                response.put("error", "학생을 찾을 수 없습니다");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // 모든 과제 조회
+            List<Map<String, Object>> assignments = assignmentRepository.findByStudent(student)
+                    .stream()
+                    .map(this::assignmentToMap)
+                    .collect(Collectors.toList());
+            
+            // 모든 수업 조회
+            List<Map<String, Object>> lectures = lectureRepository.findByStudent(student)
+                    .stream()
+                    .map(this::lectureToMap)
+                    .collect(Collectors.toList());
+            
+            response.put("success", true);
+            response.put("assignments", assignments);
+            response.put("lectures", lectures);
+            
+            System.out.println("Returning all " + assignments.size() + " assignments and " + 
                              lectures.size() + " lectures for student " + studentId);
             
             return ResponseEntity.ok(response);
@@ -150,6 +193,7 @@ public class DeadlineController {
         
         if (assignment.getDueAt() != null) {
             map.put("dueAt", formatter.format(assignment.getDueAt()));
+            map.put("dueDate", formatter.format(assignment.getDueAt())); // 캘린더용
             
             // 남은 일수 계산
             long remainingSeconds = assignment.getDueAt().getEpochSecond() - Instant.now().getEpochSecond();
@@ -157,6 +201,7 @@ public class DeadlineController {
             map.put("remainingDays", Math.max(0, remainingDays));
         } else {
             map.put("dueAt", null);
+            map.put("dueDate", null);
             map.put("remainingDays", null);
         }
         
@@ -174,6 +219,7 @@ public class DeadlineController {
         
         if (lecture.getDueAt() != null) {
             map.put("dueAt", formatter.format(lecture.getDueAt()));
+            map.put("lectureDate", formatter.format(lecture.getDueAt())); // 캘린더용
             
             // 남은 일수 계산
             long remainingSeconds = lecture.getDueAt().getEpochSecond() - Instant.now().getEpochSecond();
@@ -181,6 +227,7 @@ public class DeadlineController {
             map.put("remainingDays", Math.max(0, remainingDays));
         } else {
             map.put("dueAt", null);
+            map.put("lectureDate", null);
             map.put("remainingDays", null);
         }
         
